@@ -1,4 +1,4 @@
-name: Build Kebabian ISO
+name: Build Kebabian ISO (Ubuntu-based)
 
 on:
   push:
@@ -13,31 +13,28 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Install live-build and syslinux
+    - name: Install live-build
       run: |
         sudo apt-get update
-        sudo apt-get install -y live-build debootstrap syslinux isolinux
+        sudo apt-get install -y live-build debootstrap
     
     - name: Build Kebabian ISO
       run: |
         mkdir -p kebabian-build
         cd kebabian-build
         
-        # Configure with explicit syslinux path (removed invalid timeout option)
+        # Ubuntu-based - this always works on Ubuntu runners
         lb config \
-          --mode debian \
-          --distribution bookworm \
+          --distribution jammy \
           --architecture amd64 \
-          --archive-areas "main contrib non-free" \
-          --parent-mirror-bootstrap "https://deb.debian.org/debian/" \
-          --parent-mirror-chroot "https://deb.debian.org/debian/" \
-          --parent-mirror-binary "https://deb.debian.org/debian/" \
-          --security false \
-          --linux-packages "none" \
-          --memtest false \
-          --syslinux "/usr/lib/syslinux/modules/bios"
+          --archive-areas "main universe multiverse restricted" \
+          --debian-installer live \
+          --bootappend-live "boot=live components quiet splash" \
+          --iso-publisher "Kebabian" \
+          --iso-volume "Kebabian Live" \
+          --iso-application "Kebabian OS"
         
-        # Add packages
+        # Add packages (using Xubuntu desktop for a clean experience)
         mkdir -p config/package-lists
         cat > config/package-lists/kebabian.list.chroot << 'EOF'
         neofetch
@@ -48,38 +45,9 @@ jobs:
         wget
         sudo
         network-manager
-        xfce4
-        xfce4-goodies
+        xubuntu-desktop
         lightdm
         EOF
-        
-        # Hook to add security repo
-        mkdir -p config/hooks/normal
-        cat > config/hooks/normal/0001-add-security.hook.chroot << 'EOF'
-        #!/bin/bash
-        echo "deb http://security.debian.org/debian-security bookworm-security main contrib non-free" >> /etc/apt/sources.list
-        apt-get update
-        EOF
-        chmod +x config/hooks/normal/0001-add-security.hook.chroot
-        
-        # Hook to fix syslinux paths
-        cat > config/hooks/normal/0002-fix-syslinux.hook.chroot << 'EOF'
-        #!/bin/bash
-        # Create directories syslinux expects
-        mkdir -p /usr/lib/ISOLINUX
-        mkdir -p /usr/lib/syslinux/modules/bios
-        
-        # Copy files if they exist
-        if [ -f /usr/lib/syslinux/modules/bios/isolinux.bin ]; then
-          cp /usr/lib/syslinux/modules/bios/isolinux.bin /usr/lib/ISOLINUX/ 2>/dev/null || true
-        fi
-        
-        # Copy .c32 modules
-        if [ -d /usr/lib/syslinux/modules/bios ]; then
-          cp /usr/lib/syslinux/modules/bios/*.c32 /usr/lib/syslinux/ 2>/dev/null || true
-        fi
-        EOF
-        chmod +x config/hooks/normal/0002-fix-syslinux.hook.chroot
         
         sudo lb build
     
