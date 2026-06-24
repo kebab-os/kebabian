@@ -23,7 +23,7 @@ jobs:
         mkdir -p kebabuntu-build
         cd kebabuntu-build
         
-        # Kebabuntu - with syslinux theme disabled
+        # Kebabuntu - with syslinux completely disabled
         lb config \
           --distribution jammy \
           --architecture amd64 \
@@ -33,7 +33,7 @@ jobs:
           --iso-publisher "Kebabuntu" \
           --iso-volume "Kebabuntu Live" \
           --iso-application "Kebabuntu OS" \
-          --syslinux-theme "none"
+          --syslinux false
         
         # Add packages
         mkdir -p config/package-lists
