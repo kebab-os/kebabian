@@ -56,6 +56,13 @@ jobs:
           # Remove isolinux/syslinux to avoid conflicts
           rm -rf config/bootloaders/isolinux 2>/dev/null || true
           
+          # ===== FORCE GRUB ONLY, DISABLE SYSLINUX COMPLETELY =====
+          cat > config/binary << 'EOF'
+          LB_BOOTLOADER=\"grub\"
+          LB_BOOTLOADER_SYSLINUX=\"false\"
+          LB_BINARY_PACKAGE_LISTS=\"\"
+          EOF
+          
           lb build --verbose
           
           if [ -f live-image-amd64.hybrid.iso ]; then
