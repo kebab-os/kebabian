@@ -1,4 +1,4 @@
-name: Build Kebabian ISO (Official Mirror)
+name: Build Kebabian ISO
 
 on:
   push:
@@ -23,7 +23,7 @@ jobs:
         mkdir -p kebabian-build
         cd kebabian-build
         
-        # Use official Debian mirror
+        # Disable linux-image generation to avoid Contents file check
         lb config \
           --mode debian \
           --distribution bookworm \
@@ -32,7 +32,8 @@ jobs:
           --parent-mirror-bootstrap "https://deb.debian.org/debian/" \
           --parent-mirror-chroot "https://deb.debian.org/debian/" \
           --parent-mirror-binary "https://deb.debian.org/debian/" \
-          --security false
+          --security false \
+          --linux-packages "none"
         
         # Add packages
         mkdir -p config/package-lists
@@ -50,7 +51,7 @@ jobs:
         lightdm
         EOF
         
-        # Hook to add security repo
+        # Hook to add security repo correctly
         mkdir -p config/hooks/normal
         cat > config/hooks/normal/0001-add-security.hook.chroot << 'EOF'
         #!/bin/bash
