@@ -5,6 +5,10 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+# Grant necessary permissions for creating releases
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-22.04
@@ -16,9 +20,9 @@ jobs:
     - name: Build Kebabuntu inside Docker (Ubuntu jammy)
       run: |
         docker run --rm -v $(pwd):/workspace -w /workspace ubuntu:jammy bash -c "
-          set -e  # Stop on any error
+          set -e
           
-          # Update and install required packages
+          # Install dependencies
           apt-get update
           apt-get install -y live-build debootstrap grub-pc-bin grub-efi-amd64-bin \
                              squashfs-tools xorriso isolinux syslinux-utils \
@@ -41,7 +45,7 @@ jobs:
           
           # Add packages
           mkdir -p config/package-lists
-          cat > config/package-lists/kebabuntu.list.chroot << 'PKGEOF'
+          cat > config/package-lists/kebabuntu.list.chroot << 'EOF'
           xubuntu-desktop
           neofetch
           git
@@ -52,14 +56,24 @@ jobs:
           sudo
           network-manager
           lightdm
-          PKGEOF
+          EOF
           
           # Build the ISO
           lb build
           
-          # Copy and rename ISO to the workspace root
+          # Copy the ISO to workspace
           cp live-image-amd64.hybrid.iso /workspace/kebabuntu.iso
         "
+    
+    - name: Verify ISO exists
+      run: |
+        if [ -f kebabuntu.iso ]; then
+          echo "✅ ISO found: $(ls -lh kebabuntu.iso)"
+        else
+          echo "❌ ISO not found!"
+          ls -la
+          exit 1
+        fi
     
     - name: Create GitHub Release
       if: success()
