@@ -26,6 +26,7 @@ jobs:
           mkdir -p kebabuntu-build
           cd kebabuntu-build
           
+          # Force GRUB only, completely disable syslinux
           lb config \
             --mode ubuntu \
             --distribution jammy \
@@ -35,7 +36,10 @@ jobs:
             --bootappend-live 'boot=live components quiet splash' \
             --iso-publisher 'Kebabuntu' \
             --iso-volume 'Kebabuntu Live' \
-            --iso-application 'Kebabuntu OS'
+            --iso-application 'Kebabuntu OS' \
+            --bootloader 'grub' \
+            --syslinux false \
+            --grub-splash 'none'
           
           mkdir -p config/package-lists
           echo 'xfce4' > config/package-lists/kebabuntu.list.chroot
