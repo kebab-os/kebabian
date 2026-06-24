@@ -26,17 +26,15 @@ jobs:
           mkdir -p kebabuntu-build
           cd kebabuntu-build
           
-          # ===== Create custom auto/config (NO backslashes) =====
-          cat > auto/config << 'EOF'
-          #!/bin/sh
-          LB_BOOTLOADER=\"grub\"
-          LB_BOOTLOADER_SYSLINUX=\"false\"
-          LB_BOOTLOADER_GRUB_LEGACY=\"false\"
-          LB_BINARY_PACKAGE_LISTS=\"\"
-          LB_MEMTEST=\"false\"
-          EOF
+          # ===== Create custom auto/config WITHOUT heredoc =====
+          mkdir -p auto
+          echo '#!/bin/sh'                          >  auto/config
+          echo 'LB_BOOTLOADER=\"grub\"'             >> auto/config
+          echo 'LB_BOOTLOADER_SYSLINUX=\"false\"'   >> auto/config
+          echo 'LB_BOOTLOADER_GRUB_LEGACY=\"false\"'>> auto/config
+          echo 'LB_BINARY_PACKAGE_LISTS=\"\"'       >> auto/config
+          echo 'LB_MEMTEST=\"false\"'               >> auto/config
           
-          # Run lb config – it will source our auto/config
           lb config \
             --mode ubuntu \
             --distribution jammy \
@@ -49,7 +47,6 @@ jobs:
             --iso-application 'Kebabuntu OS' \
             --bootloader 'grub'
           
-          # Package list
           mkdir -p config/package-lists
           echo 'xfce4' > config/package-lists/kebabuntu.list.chroot
           echo 'xfce4-goodies' >> config/package-lists/kebabuntu.list.chroot
@@ -64,19 +61,22 @@ jobs:
           echo 'network-manager' >> config/package-lists/kebabuntu.list.chroot
           echo 'firefox' >> config/package-lists/kebabuntu.list.chroot
           
-          # Remove any isolinux leftovers
           rm -rf config/bootloaders/isolinux 2>/dev/null || true
           
-          # ===== Overwrite config/binary to be double-sure (NO backslashes) =====
-          cat > config/binary << 'EOF'
-          LB_BOOTLOADER=\"grub\"
-          LB_BOOTLOADER_SYSLINUX=\"false\"
-          LB_BOOTLOADER_GRUB_LEGACY=\"false\"
-          LB_BINARY_PACKAGE_LISTS=\"\"
-          LB_MEMTEST=\"false\"
-          EOF
+          # ===== Overwrite config/binary WITHOUT heredoc =====
+          echo 'LB_BOOTLOADER=\"grub\"'             >  config/binary
+          echo 'LB_BOOTLOADER_SYSLINUX=\"false\"'   >> config/binary
+          echo 'LB_BOOTLOADER_GRUB_LEGACY=\"false\"'>> config/binary
+          echo 'LB_BINARY_PACKAGE_LISTS=\"\"'       >> config/binary
+          echo 'LB_MEMTEST=\"false\"'               >> config/binary
           
-          # Finally build
+          # Export as environment (extra safety)
+          export LB_BOOTLOADER='grub'
+          export LB_BOOTLOADER_SYSLINUX='false'
+          export LB_BOOTLOADER_GRUB_LEGACY='false'
+          export LB_BINARY_PACKAGE_LISTS=''
+          export LB_MEMTEST='false'
+          
           lb build --verbose
           
           if [ -f live-image-amd64.hybrid.iso ]; then
