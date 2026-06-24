@@ -23,7 +23,7 @@ jobs:
         mkdir -p kebabian-build
         cd kebabian-build
         
-        # Configure with explicit syslinux paths
+        # Configure with explicit syslinux path (removed invalid timeout option)
         lb config \
           --mode debian \
           --distribution bookworm \
@@ -35,8 +35,7 @@ jobs:
           --security false \
           --linux-packages "none" \
           --memtest false \
-          --syslinux "/usr/lib/syslinux/modules/bios" \
-          --syslinux-timeout 0
+          --syslinux "/usr/lib/syslinux/modules/bios"
         
         # Add packages
         mkdir -p config/package-lists
@@ -63,23 +62,26 @@ jobs:
         EOF
         chmod +x config/hooks/normal/0001-add-security.hook.chroot
         
-        # Hook to copy syslinux files to the right place
-        mkdir -p config/hooks/normal
+        # Hook to fix syslinux paths
         cat > config/hooks/normal/0002-fix-syslinux.hook.chroot << 'EOF'
         #!/bin/bash
-        # Create the directories syslinux expects
-        mkdir -p /usr/lib/syslinux
+        # Create directories syslinux expects
         mkdir -p /usr/lib/ISOLINUX
+        mkdir -p /usr/lib/syslinux/modules/bios
         
-        # Copy syslinux files if they exist elsewhere
+        # Copy files if they exist
+        if [ -f /usr/lib/syslinux/modules/bios/isolinux.bin ]; then
+          cp /usr/lib/syslinux/modules/bios/isolinux.bin /usr/lib/ISOLINUX/ 2>/dev/null || true
+        fi
+        
+        # Copy .c32 modules
         if [ -d /usr/lib/syslinux/modules/bios ]; then
           cp /usr/lib/syslinux/modules/bios/*.c32 /usr/lib/syslinux/ 2>/dev/null || true
-          cp /usr/lib/syslinux/modules/bios/isolinux.bin /usr/lib/ISOLINUX/ 2>/dev/null || true
         fi
         EOF
         chmod +x config/hooks/normal/0002-fix-syslinux.hook.chroot
         
-        sudo lb build --verbose
+        sudo lb build
     
     - name: Upload ISO
       if: always()
