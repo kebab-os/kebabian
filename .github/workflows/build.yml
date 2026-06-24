@@ -26,7 +26,6 @@ jobs:
           mkdir -p kebabuntu-build
           cd kebabuntu-build
           
-          # Force Ubuntu mode
           lb config \
             --mode ubuntu \
             --distribution jammy \
@@ -39,31 +38,27 @@ jobs:
             --iso-application 'Kebabuntu OS'
           
           mkdir -p config/package-lists
-          cat > config/package-lists/kebabuntu.list.chroot << 'EOF'
-          xfce4
-          xfce4-goodies
-          lightdm
-          neofetch
-          git
-          vim
-          htop
-          curl
-          wget
-          sudo
-          network-manager
-          firefox
-          EOF
+          echo 'xfce4' > config/package-lists/kebabuntu.list.chroot
+          echo 'xfce4-goodies' >> config/package-lists/kebabuntu.list.chroot
+          echo 'lightdm' >> config/package-lists/kebabuntu.list.chroot
+          echo 'neofetch' >> config/package-lists/kebabuntu.list.chroot
+          echo 'git' >> config/package-lists/kebabuntu.list.chroot
+          echo 'vim' >> config/package-lists/kebabuntu.list.chroot
+          echo 'htop' >> config/package-lists/kebabuntu.list.chroot
+          echo 'curl' >> config/package-lists/kebabuntu.list.chroot
+          echo 'wget' >> config/package-lists/kebabuntu.list.chroot
+          echo 'sudo' >> config/package-lists/kebabuntu.list.chroot
+          echo 'network-manager' >> config/package-lists/kebabuntu.list.chroot
+          echo 'firefox' >> config/package-lists/kebabuntu.list.chroot
           
-          # Build with verbose output
           lb build --verbose
           
-          # Check for ISO
           if [ -f live-image-amd64.hybrid.iso ]; then
-            echo "✅ ISO found!"
+            echo '✅ ISO found!'
             cp live-image-amd64.hybrid.iso /workspace/kebabuntu.iso
             chmod 644 /workspace/kebabuntu.iso
           else
-            echo "❌ ISO not found!"
+            echo '❌ ISO not found!'
             ls -la
             exit 1
           fi
