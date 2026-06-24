@@ -56,12 +56,18 @@ jobs:
           # Remove isolinux leftovers
           rm -rf config/bootloaders/isolinux 2>/dev/null || true
           
-          # ===== Force the right settings via environment (bypass file overrides) =====
+          # ===== Patch live-build to remove the broken grub-legacy reference =====
+          find /usr/lib/live/build /usr/share/live/build -type f -name '*binary_grub*' -exec grep -l 'grub-legacy' {} \; | while read f; do
+            echo \"Patching \$f\"
+            sed -i 's/install.*grub-legacy/# \\0/' \"\$f\"
+          done
+          
+          # Also export safe values as a double safety net
           export LB_BOOTLOADER='grub'
           export LB_BOOTLOADER_SYSLINUX='false'
           export LB_BOOTLOADER_GRUB_LEGACY='false'
           export LB_BINARY_PACKAGE_LISTS=''
-          export LB_MEMTEST='false'   # skip memtest to keep build clean
+          export LB_MEMTEST='false'
           
           lb build --verbose
           
