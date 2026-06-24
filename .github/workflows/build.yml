@@ -26,12 +26,9 @@ jobs:
           mkdir -p kebabuntu-build
           cd kebabuntu-build
           
-          # ===== Create a custom auto/config BEFORE lb config =====
-          # This overrides the Ubuntu-specific defaults that force grub-legacy
-          mkdir -p auto
+          # ===== Create custom auto/config (NO backslashes) =====
           cat > auto/config << 'EOF'
           #!/bin/sh
-          # Custom auto/config for Kebabuntu – disables syslinux & legacy GRUB
           LB_BOOTLOADER=\"grub\"
           LB_BOOTLOADER_SYSLINUX=\"false\"
           LB_BOOTLOADER_GRUB_LEGACY=\"false\"
@@ -39,7 +36,7 @@ jobs:
           LB_MEMTEST=\"false\"
           EOF
           
-          # Now lb config will source our auto/config, not the Ubuntu one
+          # Run lb config – it will source our auto/config
           lb config \
             --mode ubuntu \
             --distribution jammy \
@@ -52,6 +49,7 @@ jobs:
             --iso-application 'Kebabuntu OS' \
             --bootloader 'grub'
           
+          # Package list
           mkdir -p config/package-lists
           echo 'xfce4' > config/package-lists/kebabuntu.list.chroot
           echo 'xfce4-goodies' >> config/package-lists/kebabuntu.list.chroot
@@ -66,8 +64,19 @@ jobs:
           echo 'network-manager' >> config/package-lists/kebabuntu.list.chroot
           echo 'firefox' >> config/package-lists/kebabuntu.list.chroot
           
+          # Remove any isolinux leftovers
           rm -rf config/bootloaders/isolinux 2>/dev/null || true
           
+          # ===== Overwrite config/binary to be double-sure (NO backslashes) =====
+          cat > config/binary << 'EOF'
+          LB_BOOTLOADER=\"grub\"
+          LB_BOOTLOADER_SYSLINUX=\"false\"
+          LB_BOOTLOADER_GRUB_LEGACY=\"false\"
+          LB_BINARY_PACKAGE_LISTS=\"\"
+          LB_MEMTEST=\"false\"
+          EOF
+          
+          # Finally build
           lb build --verbose
           
           if [ -f live-image-amd64.hybrid.iso ]; then
