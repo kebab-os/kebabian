@@ -1,4 +1,4 @@
-name: Build Kebabian ISO (Ubuntu-based)
+name: Build Kebabuntu ISO
 
 on:
   push:
@@ -18,25 +18,25 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y live-build debootstrap
     
-    - name: Build Kebabian ISO
+    - name: Build Kebabuntu ISO
       run: |
-        mkdir -p kebabian-build
-        cd kebabian-build
+        mkdir -p kebabuntu-build
+        cd kebabuntu-build
         
-        # Ubuntu-based - this always works on Ubuntu runners
+        # Kebabuntu - Ubuntu-based
         lb config \
           --distribution jammy \
           --architecture amd64 \
           --archive-areas "main universe multiverse restricted" \
           --debian-installer live \
           --bootappend-live "boot=live components quiet splash" \
-          --iso-publisher "Kebabian" \
-          --iso-volume "Kebabian Live" \
-          --iso-application "Kebabian OS"
+          --iso-publisher "Kebabuntu" \
+          --iso-volume "Kebabuntu Live" \
+          --iso-application "Kebabuntu OS"
         
-        # Add packages (using Xubuntu desktop for a clean experience)
+        # Add packages
         mkdir -p config/package-lists
-        cat > config/package-lists/kebabian.list.chroot << 'EOF'
+        cat > config/package-lists/kebabuntu.list.chroot << 'EOF'
         neofetch
         git
         vim
@@ -55,6 +55,6 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: kebabian-iso
-        path: kebabian-build/live-image-amd64.hybrid.iso
+        name: kebabuntu-iso
+        path: kebabuntu-build/live-image-amd64.hybrid.iso
         if-no-files-found: warn
