@@ -13,17 +13,17 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Install live-build and syslinux
+    - name: Install live-build
       run: |
         sudo apt-get update
-        sudo apt-get install -y live-build debootstrap syslinux isolinux syslinux-common syslinux-themes-ubuntu gfxboot-theme-ubuntu
+        sudo apt-get install -y live-build debootstrap
     
     - name: Build Kebabuntu ISO
       run: |
         mkdir -p kebabuntu-build
         cd kebabuntu-build
         
-        # Kebabuntu - Ubuntu-based
+        # Kebabuntu - with syslinux theme disabled
         lb config \
           --distribution jammy \
           --architecture amd64 \
@@ -32,7 +32,8 @@ jobs:
           --bootappend-live "boot=live components quiet splash" \
           --iso-publisher "Kebabuntu" \
           --iso-volume "Kebabuntu Live" \
-          --iso-application "Kebabuntu OS"
+          --iso-application "Kebabuntu OS" \
+          --syslinux-theme "none"
         
         # Add packages
         mkdir -p config/package-lists
