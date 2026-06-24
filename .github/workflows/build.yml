@@ -13,17 +13,17 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Install live-build
+    - name: Install live-build and syslinux
       run: |
         sudo apt-get update
-        sudo apt-get install -y live-build debootstrap
+        sudo apt-get install -y live-build debootstrap syslinux isolinux syslinux-common syslinux-themes-ubuntu gfxboot-theme-ubuntu
     
     - name: Build Kebabuntu ISO
       run: |
         mkdir -p kebabuntu-build
         cd kebabuntu-build
         
-        # Kebabuntu - Ubuntu-based, NO installer
+        # Kebabuntu - Ubuntu-based
         lb config \
           --distribution jammy \
           --architecture amd64 \
