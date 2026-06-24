@@ -54,27 +54,36 @@ jobs:
           
           lb build
           
-          # Copy ISO to the workspace root
+          # Check if ISO exists and copy it OUTSIDE the container
           if [ -f live-image-amd64.hybrid.iso ]; then
-            echo "✅ ISO found, copying to workspace..."
+            echo "✅ ISO found inside container!"
+            ls -la live-image-amd64.hybrid.iso
+            # Copy to workspace with correct permissions
             cp live-image-amd64.hybrid.iso /workspace/kebabuntu.iso
+            chmod 644 /workspace/kebabuntu.iso
           else
-            echo "❌ ISO not found!"
+            echo "❌ ISO not found inside container!"
             ls -la
             exit 1
           fi
         "
     
-    - name: Verify ISO exists
+    - name: Verify and set permissions
       run: |
-        echo "=== Files in workspace ==="
+        echo "=== Checking workspace ==="
         ls -la
-        if [ -f kebabuntu.iso ]; then
-          echo "✅ ISO found! Size: $(ls -lh kebabuntu.iso | awk '{print $5}')"
+        # If ISO exists in kebabuntu-build, copy it out
+        if [ -f kebabuntu-build/live-image-amd64.hybrid.iso ]; then
+          echo "✅ Found ISO in kebabuntu-build!"
+          cp kebabuntu-build/live-image-amd64.hybrid.iso kebabuntu.iso
+          ls -la kebabuntu.iso
+        elif [ -f kebabuntu.iso ]; then
+          echo "✅ ISO found in workspace root!"
+          ls -la kebabuntu.iso
         else
-          echo "❌ ISO NOT found in workspace!"
-          echo "Searching for ISO..."
-          find . -name "*.iso" -ls || echo "No ISO anywhere!"
+          echo "❌ ISO still not found!"
+          echo "Searching everywhere..."
+          find . -name "*.iso" -ls 2>/dev/null || echo "No ISO found"
           exit 1
         fi
     
