@@ -13,67 +13,29 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Install live-build and dependencies
+    - name: Install live-build
       run: |
         sudo apt-get update
-        sudo apt-get install -y \
-          live-build \
-          debootstrap \
-          squashfs-tools \
-          xorriso \
-          isolinux \
-          syslinux-utils \
-          mtools \
-          dosfstools \
-          grub-pc-bin \
-          grub-efi-amd64-bin \
-          grub-common
+        sudo apt-get install -y live-build debootstrap
     
     - name: Build Kebabian ISO
       run: |
         mkdir -p kebabian-build
         cd kebabian-build
         
-        # Configure Kebabian
+        # Use the debian-live config, not ubuntu
         lb config \
+          --mode debian \
           --distribution bookworm \
           --architecture amd64 \
           --archive-areas "main contrib non-free" \
-          --debian-installer live \
-          --bootappend-live "boot=live components quiet splash" \
-          --iso-publisher "Kebabian" \
-          --iso-volume "Kebabian Live" \
-          --iso-application "Kebabian OS"
+          --mirror-bootstrap "http://deb.debian.org/debian/" \
+          --mirror-chroot-security "http://deb.debian.org/debian-security/"
         
-        # Add packages to make it yours
+        # Add packages
         mkdir -p config/package-lists
-        cat > config/package-lists/kebabian.list.chroot << 'EOF'
-        # Essential tools
-        neofetch
-        git
-        vim
-        htop
-        curl
-        wget
-        sudo
-        network-manager
+        echo "neofetch" > config/package-lists/kebabian.list.chroot
         
-        # Desktop environment (choose one)
-        # Option 1: Lightweight XFCE (recommended for first build)
-        xfce4
-        xfce4-goodies
-        lightdm
-        
-        # Option 2: GNOME (heavier)
-        # gnome-core
-        # gdm3
-        
-        # Option 3: KDE Plasma (heaviest)
-        # kde-plasma-desktop
-        # sddm
-        EOF
-        
-        # Build it!
         sudo lb build
     
     - name: Upload ISO
