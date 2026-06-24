@@ -7,34 +7,68 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
     
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y live-build debootstrap squashfs-tools xorriso isolinux syslinux-utils
-        sudo apt-get install -y --no-install-recommends live-build
+        sudo apt-get install -y \
+          live-build \
+          debootstrap \
+          squashfs-tools \
+          xorriso \
+          isolinux \
+          syslinux-utils \
+          mtools \
+          dosfstools \
+          grub-pc-bin \
+          grub-efi-amd64-bin \
+          grub-common
     
-    - name: Configure and build
+    - name: Build Kebabian ISO
       run: |
         mkdir -p kebabian-build
         cd kebabian-build
+        
+        # Initialize live-build configuration
         lb config \
           --distribution bookworm \
           --architecture amd64 \
-          --archive-areas "main contrib non-free"
+          --archive-areas "main contrib non-free" \
+          --debian-installer live \
+          --bootappend-live "boot=live components quiet splash"
         
-        # Add packages
-        echo "neofetch" >> config/package-lists/kebabian.list.chroot
+        # Create package list with some basic packages
+        mkdir -p config/package-lists
+        cat > config/package-lists/kebabian.list.chroot << 'EOF'
+        neofetch
+        git
+        vim
+        htop
+        curl
+        wget
+        sudo
+        network-manager
+        EOF
         
-        # Build
-        sudo lb build
+        # Build the ISO (this will take 10-20 minutes)
+        sudo lb build 2>&1 | tee build.log
     
     - name: Upload ISO
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: kebabian-iso
         path: kebabian-build/live-image-amd64.hybrid.iso
+        if-no-files-found: warn
+    
+    - name: Upload build log
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-log
+        path: kebabian-build/build.log
