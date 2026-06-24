@@ -13,9 +13,9 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Build Kebabuntu inside Docker
+    - name: Build Kebabuntu inside Docker (Privileged)
       run: |
-        docker run --rm -v $(pwd):/workspace -w /workspace ubuntu:jammy bash -c "
+        docker run --privileged --rm -v $(pwd):/workspace -w /workspace ubuntu:jammy bash -c "
           set -e
           
           apt-get update
