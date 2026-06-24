@@ -1,2 +1,2 @@
-# kebabian
-debian based linux distribution
+# kebabuntu
+ubuntu based linux distribution
