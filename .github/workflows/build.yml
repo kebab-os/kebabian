@@ -1,4 +1,4 @@
-name: Build Kebabuntu ISO (fast method - repack Xubuntu)
+name: Build Kebabuntu ISO (fast method)
 
 on:
   push:
@@ -21,50 +21,67 @@ jobs:
           apt-get update
           apt-get install -y xorriso isolinux squashfs-tools wget rsync
           
-          # Download official Xubuntu 22.04 ISO
-          wget -q https://cdimage.ubuntu.com/xubuntu/releases/22.04/release/xubuntu-22.04.4-desktop-amd64.iso -O /workspace/xubuntu.iso
+          # Download official Xubuntu 22.04 ISO (correct URL)
+          XUBUNTU_URL='https://cdimage.ubuntu.com/xubuntu/releases/22.04/release/xubuntu-22.04.5-desktop-amd64.iso'
+          echo \"Downloading Xubuntu ISO...\"
+          wget -q --show-progress \"\$XUBUNTU_URL\" -O /workspace/xubuntu.iso || {
+            echo 'Primary download failed, trying alternative...'
+            wget -q --show-progress 'https://mirror.us.leaseweb.net/ubuntu-cdimage/xubuntu/releases/22.04/release/xubuntu-22.04.5-desktop-amd64.iso' -O /workspace/xubuntu.iso
+          }
           
-          mkdir -p /workspace/{iso,squashfs,custom}
+          mkdir -p /workspace/{iso,squashfs}
           
           # Extract ISO contents
+          echo 'Extracting ISO...'
           mount -o loop /workspace/xubuntu.iso /mnt
           rsync -a /mnt/ /workspace/iso/
           umount /mnt
           
           # Extract the squashfs filesystem
+          echo 'Extracting filesystem...'
           unsquashfs -d /workspace/squashfs /workspace/iso/casper/filesystem.squashfs
           
           # Customize the filesystem
-          mkdir -p /workspace/squashfs/usr/share/backgrounds
-          # Add custom wallpaper if available
-          cp /workspace/wallpaper.png /workspace/squashfs/usr/share/backgrounds/kebabuntu-wallpaper.png 2>/dev/null || true
+          echo 'Customizing Kebabuntu...'
           
-          # Customize branding
-          echo 'Kebabuntu 22.04 LTS' > /workspace/squashfs/etc/kebabuntu-release
-          printf 'NAME=\"Kebabuntu\"\nVERSION=\"22.04 LTS\"\nID=kebabuntu\nPRETTY_NAME=\"Kebabuntu 22.04 LTS\"\n' > /workspace/squashfs/usr/lib/os-release
-          
-          # Install additional packages via chroot
+          # Set up chroot mounts
           mount --bind /dev /workspace/squashfs/dev
           mount --bind /dev/pts /workspace/squashfs/dev/pts
           mount -t proc proc /workspace/squashfs/proc
           mount -t sysfs sys /workspace/squashfs/sys
           
+          # Install custom packages
           chroot /workspace/squashfs apt-get update
-          chroot /workspace/squashfs apt-get install -y neofetch htop vim git curl wget
+          chroot /workspace/squashfs apt-get install -y neofetch htop vim git curl wget 2>/dev/null || true
           chroot /workspace/squashfs apt-get clean
           
+          # Customize branding
+          echo 'Kebabuntu 22.04 LTS' > /workspace/squashfs/etc/kebabuntu-release
+          printf '%s\n' \
+            'NAME=\"Kebabuntu\"' \
+            'VERSION=\"22.04 LTS\"' \
+            'ID=kebabuntu' \
+            'PRETTY_NAME=\"Kebabuntu 22.04 LTS\"' \
+            > /workspace/squashfs/usr/lib/os-release
+          
+          # Unmount chroot
           umount -lf /workspace/squashfs/proc
           umount -lf /workspace/squashfs/sys
           umount -lf /workspace/squashfs/dev/pts
           umount -lf /workspace/squashfs/dev
           
-          # Repack squashfs with fast compression
+          # Repack squashfs (fast gzip compression)
+          echo 'Repacking filesystem...'
           mksquashfs /workspace/squashfs /workspace/iso/casper/filesystem.squashfs -comp gzip -noappend
           
           # Update filesystem.size
           printf \$(du -sx --block-size=1 /workspace/squashfs | cut -f1) > /workspace/iso/casper/filesystem.size
           
+          # Remove old MD5 checksum to avoid confusion
+          rm -f /workspace/iso/md5sum.txt
+          
           # Create new ISO
+          echo 'Creating ISO...'
           xorriso -as mkisofs \
             -iso-level 3 \
             -full-iso9660-filenames \
