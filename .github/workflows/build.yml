@@ -55,8 +55,7 @@ jobs:
           
           rm -rf config/bootloaders/isolinux 2>/dev/null || true
           
-          # ===== PATCH ALL offending live-build scripts =====
-          # Remove grub-legacy from binary_grub scripts
+          # ===== PATCH live-build scripts =====
           for f in /usr/lib/live/build/binary_grub /usr/share/live/build/binary_grub; do
             if [ -f \"\$f\" ]; then
               sed -i '/grub-legacy/d' \"\$f\"
@@ -66,15 +65,29 @@ jobs:
           find /usr/lib/live/build /usr/share/live/build -type f -name '*binary_grub*' -exec sed -i '/grub-legacy/d' {} \;
           find /usr/lib/live/build /usr/share/live/build -type f -name '*binary_grub*' -exec sed -i '/stage2_eltorito/d' {} \;
           
-          # Replace stage2_eltorito with cdboot.img in binary_iso script
+          # Replace stage2_eltorito with a relative path inside binary
           for f in /usr/lib/live/build/binary_iso /usr/share/live/build/binary_iso; do
             if [ -f \"\$f\" ]; then
-              sed -i 's|boot/grub/stage2_eltorito|/usr/lib/grub/i386-pc/cdboot.img|g' \"\$f\"
+              sed -i 's|boot/grub/stage2_eltorito|boot/grub/cdboot.img|g' \"\$f\"
             fi
           done
-          find /usr/lib/live/build /usr/share/live/build -type f -name '*binary_iso*' -exec sed -i 's|boot/grub/stage2_eltorito|/usr/lib/grub/i386-pc/cdboot.img|g' {} \;
+          find /usr/lib/live/build /usr/share/live/build -type f -name '*binary_iso*' -exec sed -i 's|boot/grub/stage2_eltorito|boot/grub/cdboot.img|g' {} \;
           
-          # Ensure proper PATH (fix isohybrid not found)
+          # ===== Create hook to copy cdboot.img before ISO generation =====
+          mkdir -p config/hooks/normal
+          cat > config/hooks/normal/0900-copy-cdboot.hook.chroot << 'HOOKEOF'
+          #!/bin/sh
+          # This runs inside the chroot, so /boot is the binary's boot directory
+          mkdir -p /boot/grub
+          cp /usr/lib/grub/i386-pc/cdboot.img /boot/grub/cdboot.img
+          HOOKEOF
+          chmod +x config/hooks/normal/0900-copy-cdboot.hook.chroot
+          
+          # Also copy directly to binary directory for safety
+          mkdir -p binary/boot/grub
+          cp /usr/lib/grub/i386-pc/cdboot.img binary/boot/grub/cdboot.img
+          
+          # ===== Ensure proper PATH =====
           export PATH=\"/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"
           
           # Disable memtest and syslinux
