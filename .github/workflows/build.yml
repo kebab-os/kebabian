@@ -54,7 +54,7 @@ jobs:
           
           rm -rf config/bootloaders/isolinux 2>/dev/null || true
           
-          # Patch binary_grub (remove grub-legacy & stage2 references)
+          # Patch binary_grub scripts
           find /usr/lib/live/build /usr/share/live/build -type f -name '*binary_grub*' \
             -exec sed -i '/grub-legacy/d; /stage2_eltorito/d' {} \;
           
@@ -62,15 +62,26 @@ jobs:
           export LB_BOOTLOADER_SYSLINUX='false'
           export LB_BOOTLOADER_GRUB_LEGACY='false'
           
-          # Pre-build: prepare binary/boot/grub (GRUB2 boot image + minimal grub.cfg)
+          # Pre-create boot files in binary/boot/grub
           mkdir -p binary/boot/grub
           cp /usr/lib/grub/i386-pc/cdboot.img binary/boot/grub/
           printf 'set timeout=10\nset default=0\n\nmenuentry \"Kebabuntu Live\" {\n    linux /casper/vmlinuz boot=casper quiet splash ---\n    initrd /casper/initrd\n}\n\nmenuentry \"Kebabuntu Live (safe graphics)\" {\n    linux /casper/vmlinuz boot=casper nomodeset quiet splash ---\n    initrd /casper/initrd\n}\n' > binary/boot/grub/grub.cfg
           
-          # Override binary_iso with a custom xorriso script (base64 encoded to avoid all quoting/indentation issues)
+          # ===== REPLACE SYSTEM binary_iso SCRIPTS =====
+          CUSTOM_SCRIPT_BASE64='IyEvYmluL3NoCmVjaG8gIlJ1bm5pbmcgY3VzdG9tIGJpbmFyeV9pc28gd2l0aCB4b3JyaXNvLi4uIgp4b3JyaXNvIC1hcyBta2lzb2ZzIC1pc28tbGV2ZWwgMyAtZnVsbC1pc286MC1maWxlbmFtZXMgLXZvbGlkICIkTEJfSVNPX1ZPTFVNRSIgLXB1Ymxpc2hlciAiJExCX0lTT19QVUJMSVNIRVIiIC1hcHBpZCAiJExCX0lTT19BUFBMSUNBVElPTiIgLWVsdG9yaXRvLWJvb3QgYm9vdC9ncnViL2NkYm9vdC5pbWcgLWVsdG9yaXRvLWNhdGFsb2cgYm9vdC9ncnViL2Jvb3QuY2F0IC1uby1lbXVsLWJvb3QgLWJvb3QtbG9hZC1zaXplIDQgLWJvb3QtaW5mby10YWJsZSAtbHNvaHlicmlkLWdwdC1iYXNkYXQgLW91dHB1dCAiJExCX0lTT19JTUFHRSIgYmluYXJ5Cg=='
+          echo \"\$CUSTOM_SCRIPT_BASE64\" | base64 -d > /tmp/custom_binary_iso
+          chmod +x /tmp/custom_binary_iso
+          
+          # Overwrite any existing binary_iso script in system paths
+          for path in /usr/lib/live/build/binary_iso /usr/share/live/build/binary_iso; do
+            if [ -f \"\$path\" ]; then
+              cp /tmp/custom_binary_iso \"\$path\"
+            fi
+          done
+          
+          # Also place it in config/scripts (extra safety)
           mkdir -p config/scripts
-          echo 'IyEvYmluL3NoCmVjaG8gIlJ1bm5pbmcgY3VzdG9tIGJpbmFyeV9pc28gd2l0aCB4b3JyaXNvLi4uIgp4b3JyaXNvIC1hcyBta2lzb2ZzIC1pc28tbGV2ZWwgMyAtZnVsbC1pc286MC1maWxlbmFtZXMgLXZvbGlkICIkTEJfSVNPX1ZPTFVNRSIgLXB1Ymxpc2hlciAiJExCX0lTT19QVUJMSVNIRVIiIC1hcHBpZCAiJExCX0lTT19BUFBMSUNBVElPTiIgLWVsdG9yaXRvLWJvb3QgYm9vdC9ncnViL2NkYm9vdC5pbWcgLWVsdG9yaXRvLWNhdGFsb2cgYm9vdC9ncnViL2Jvb3QuY2F0IC1uby1lbXVsLWJvb3QgLWJvb3QtbG9hZC1zaXplIDQgLWJvb3QtaW5mby10YWJsZSAtbHNvaHlicmlkLWdwdC1iYXNkYXQgLW91dHB1dCAiJExCX0lTT19JTUFHRSIgYmluYXJ5Cg==' | base64 -d > config/scripts/binary_iso
-          chmod +x config/scripts/binary_iso
+          cp /tmp/custom_binary_iso config/scripts/binary_iso
           
           lb build --verbose
           
