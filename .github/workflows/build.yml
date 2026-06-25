@@ -54,7 +54,7 @@ jobs:
           
           rm -rf config/bootloaders/isolinux 2>/dev/null || true
           
-          # Patch binary_grub to remove grub-legacy & stage2_eltorito references
+          # Patch binary_grub to remove grub-legacy & stage2 references
           find /usr/lib/live/build /usr/share/live/build -type f -name '*binary_grub*' \
             -exec sed -i '/grub-legacy/d; /stage2_eltorito/d' {} \;
           
@@ -62,22 +62,20 @@ jobs:
           export LB_BOOTLOADER_SYSLINUX='false'
           export LB_BOOTLOADER_GRUB_LEGACY='false'
           
-          # Run the build, allow failure at the ISO stage
-          set +e
-          lb build --verbose
-          set -e
+          # Run the build, stopping just before the broken ISO stage
+          lb build --stage binary_checksums --verbose
           
-          # If binary/casper exists, the important parts are done
+          # Now the binary/ directory is complete and untouched
           if [ -d binary/casper ]; then
-            echo 'Binary directory exists, creating ISO manually...'
+            echo 'Binary directory intact, creating ISO...'
             
-            # Ensure boot directory and GRUB2 files
+            # Prepare GRUB2 boot files
             mkdir -p binary/boot/grub
             cp /usr/lib/grub/i386-pc/cdboot.img binary/boot/grub/
             
             printf 'set timeout=10\nset default=0\n\nmenuentry \"Kebabuntu Live\" {\n    linux /casper/vmlinuz boot=casper quiet splash ---\n    initrd /casper/initrd\n}\n\nmenuentry \"Kebabuntu Live (safe graphics)\" {\n    linux /casper/vmlinuz boot=casper nomodeset quiet splash ---\n    initrd /casper/initrd\n}\n' > binary/boot/grub/grub.cfg
             
-            # Copy kernel and initrd from chroot if missing
+            # Ensure kernel and initrd exist
             if [ ! -f binary/casper/vmlinuz ]; then
               cp chroot/boot/vmlinuz-* binary/casper/vmlinuz 2>/dev/null || true
             fi
@@ -85,7 +83,7 @@ jobs:
               cp chroot/boot/initrd.img-* binary/casper/initrd 2>/dev/null || true
             fi
             
-            # Create hybrid ISO with xorriso (no genisoimage, no isohybrid needed)
+            # Create hybrid ISO with xorriso
             xorriso -as mkisofs \
               -iso-level 3 \
               -full-iso9660-filenames \
@@ -101,7 +99,7 @@ jobs:
               -output live-image-amd64.hybrid.iso \
               binary
             
-            echo 'ISO creation complete.'
+            echo 'ISO created!'
           fi
           
           if [ -f live-image-amd64.hybrid.iso ]; then
