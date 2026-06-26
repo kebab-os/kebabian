@@ -21,14 +21,18 @@ jobs:
           apt-get update
           apt-get install -y xorriso isolinux squashfs-tools wget rsync
           
-          # Download official Xubuntu 22.04 ISO (correct URL)
+          # Download official Xubuntu 22.04 ISO if not already present (optional cache)
           XUBUNTU_URL='https://cdimage.ubuntu.com/xubuntu/releases/22.04/release/xubuntu-22.04.5-desktop-amd64.iso'
-          echo \"Downloading Xubuntu ISO...\"
-          wget -q --show-progress \"\$XUBUNTU_URL\" -O /workspace/xubuntu.iso || {
-            echo 'Primary download failed, trying alternative...'
-            wget -q --show-progress 'https://mirror.us.leaseweb.net/ubuntu-cdimage/xubuntu/releases/22.04/release/xubuntu-22.04.5-desktop-amd64.iso' -O /workspace/xubuntu.iso
-          }
+          if [ ! -f /workspace/xubuntu.iso ]; then
+            echo \"Downloading Xubuntu ISO...\"
+            wget -q --show-progress \"\$XUBUNTU_URL\" -O /workspace/xubuntu.iso || {
+              echo 'Primary download failed, trying alternative...'
+              wget -q --show-progress 'https://mirror.us.leaseweb.net/ubuntu-cdimage/xubuntu/releases/22.04/release/xubuntu-22.04.5-desktop-amd64.iso' -O /workspace/xubuntu.iso
+            }
+          fi
           
+          # Clean any previous extraction remnants
+          rm -rf /workspace/squashfs /workspace/iso
           mkdir -p /workspace/{iso,squashfs}
           
           # Extract ISO contents
@@ -37,7 +41,7 @@ jobs:
           rsync -a /mnt/ /workspace/iso/
           umount /mnt
           
-          # Extract the squashfs filesystem
+          # Extract the squashfs filesystem (directory must not exist)
           echo 'Extracting filesystem...'
           unsquashfs -d /workspace/squashfs /workspace/iso/casper/filesystem.squashfs
           
