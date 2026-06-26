@@ -1,4 +1,4 @@
-name: Build Kebabuntu ISO (fast method)
+name: Build Kebabuntu ISO
 
 on:
   push:
@@ -13,99 +13,68 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Build Kebabuntu by repacking Xubuntu
+    - name: Build Kebabuntu inside Docker (Privileged)
       run: |
         docker run --privileged --rm -v $(pwd):/workspace -w /workspace ubuntu:jammy bash -c "
           set -e
           
           apt-get update
-          apt-get install -y xorriso isolinux squashfs-tools wget rsync
+          apt-get install -y live-build debootstrap
           
-          # Download official Xubuntu 22.04 ISO if not already present (optional cache)
-          XUBUNTU_URL='https://cdimage.ubuntu.com/xubuntu/releases/22.04/release/xubuntu-22.04.5-desktop-amd64.iso'
-          if [ ! -f /workspace/xubuntu.iso ]; then
-            echo \"Downloading Xubuntu ISO...\"
-            wget -q --show-progress \"\$XUBUNTU_URL\" -O /workspace/xubuntu.iso || {
-              echo 'Primary download failed, trying alternative...'
-              wget -q --show-progress 'https://mirror.us.leaseweb.net/ubuntu-cdimage/xubuntu/releases/22.04/release/xubuntu-22.04.5-desktop-amd64.iso' -O /workspace/xubuntu.iso
-            }
-          fi
+          mkdir -p kebabuntu-build
+          cd kebabuntu-build
           
-          # Clean any previous extraction remnants
-          rm -rf /workspace/squashfs /workspace/iso
-          mkdir -p /workspace/{iso,squashfs}
+          # Use DEBIAN mode with Ubuntu parent distribution
+          lb config \
+            --mode debian \
+            --parent-distribution jammy \
+            --distribution jammy \
+            --architecture amd64 \
+            --archive-areas 'main universe multiverse restricted' \
+            --parent-archive-areas 'main universe multiverse restricted' \
+            --debian-installer false \
+            --bootappend-live 'boot=live components quiet splash' \
+            --iso-publisher 'Kebabuntu' \
+            --iso-volume 'Kebabuntu Live' \
+            --iso-application 'Kebabuntu OS'
           
-          # Extract ISO contents
-          echo 'Extracting ISO...'
-          mount -o loop /workspace/xubuntu.iso /mnt
-          rsync -a /mnt/ /workspace/iso/
-          umount /mnt
-          
-          # Extract the squashfs filesystem (directory must not exist)
-          echo 'Extracting filesystem...'
-          unsquashfs -d /workspace/squashfs /workspace/iso/casper/filesystem.squashfs
-          
-          # Customize the filesystem
-          echo 'Customizing Kebabuntu...'
-          
-          # Set up chroot mounts
-          mount --bind /dev /workspace/squashfs/dev
-          mount --bind /dev/pts /workspace/squashfs/dev/pts
-          mount -t proc proc /workspace/squashfs/proc
-          mount -t sysfs sys /workspace/squashfs/sys
-          
-          # Install custom packages
-          chroot /workspace/squashfs apt-get update
-          chroot /workspace/squashfs apt-get install -y neofetch htop vim git curl wget 2>/dev/null || true
-          chroot /workspace/squashfs apt-get clean
-          
-          # Customize branding
-          echo 'Kebabuntu 22.04 LTS' > /workspace/squashfs/etc/kebabuntu-release
+          # Package list for XFCE
+          mkdir -p config/package-lists
           printf '%s\n' \
-            'NAME=\"Kebabuntu\"' \
-            'VERSION=\"22.04 LTS\"' \
-            'ID=kebabuntu' \
-            'PRETTY_NAME=\"Kebabuntu 22.04 LTS\"' \
-            > /workspace/squashfs/usr/lib/os-release
+            'xfce4' \
+            'xfce4-goodies' \
+            'lightdm' \
+            'neofetch' \
+            'git' \
+            'vim' \
+            'htop' \
+            'curl' \
+            'wget' \
+            'sudo' \
+            'network-manager' \
+            'firefox' \
+            > config/package-lists/kebabuntu.list.chroot
           
-          # Unmount chroot
-          umount -lf /workspace/squashfs/proc
-          umount -lf /workspace/squashfs/sys
-          umount -lf /workspace/squashfs/dev/pts
-          umount -lf /workspace/squashfs/dev
+          # Ubuntu repositories for the live system
+          mkdir -p config/archives
+          printf '%s\n' \
+            'deb http://archive.ubuntu.com/ubuntu jammy main universe multiverse restricted' \
+            'deb http://archive.ubuntu.com/ubuntu jammy-updates main universe multiverse restricted' \
+            'deb http://security.ubuntu.com/ubuntu jammy-security main universe multiverse restricted' \
+            > config/archives/ubuntu.list.chroot
           
-          # Repack squashfs (fast gzip compression)
-          echo 'Repacking filesystem...'
-          mksquashfs /workspace/squashfs /workspace/iso/casper/filesystem.squashfs -comp gzip -noappend
+          # Build the ISO
+          lb build --verbose
           
-          # Update filesystem.size
-          printf \$(du -sx --block-size=1 /workspace/squashfs | cut -f1) > /workspace/iso/casper/filesystem.size
-          
-          # Remove old MD5 checksum to avoid confusion
-          rm -f /workspace/iso/md5sum.txt
-          
-          # Create new ISO
-          echo 'Creating ISO...'
-          xorriso -as mkisofs \
-            -iso-level 3 \
-            -full-iso9660-filenames \
-            -volid 'Kebabuntu Live' \
-            -publisher Kebabuntu \
-            -appid 'Kebabuntu OS' \
-            -eltorito-boot isolinux/isolinux.bin \
-            -eltorito-catalog isolinux/boot.cat \
-            -no-emul-boot \
-            -boot-load-size 4 \
-            -boot-info-table \
-            -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin \
-            -eltorito-alt-boot \
-            -e boot/grub/efi.img \
-            -no-emul-boot \
-            -isohybrid-gpt-basdat \
-            -output /workspace/kebabuntu.iso \
-            /workspace/iso
-          
-          echo '✅ ISO created!'
+          if [ -f live-image-amd64.hybrid.iso ]; then
+            echo '✅ ISO found!'
+            cp live-image-amd64.hybrid.iso /workspace/kebabuntu.iso
+            chmod 644 /workspace/kebabuntu.iso
+          else
+            echo '❌ ISO not found!'
+            ls -la
+            exit 1
+          fi
         "
     
     - name: Upload ISO as Artifact
