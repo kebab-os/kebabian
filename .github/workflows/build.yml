@@ -13,7 +13,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Build Kebabuntu inside Docker (Privileged)
+    - name: Build Kebabuntu
       run: |
         docker run --privileged --rm -v $(pwd):/workspace -w /workspace ubuntu:jammy bash -c "
           set -e
@@ -24,7 +24,7 @@ jobs:
           mkdir -p kebabuntu-build
           cd kebabuntu-build
           
-          # Use DEBIAN mode with Ubuntu mirrors, disable auto-security and auto-kernel
+          # Debian mode with Ubuntu parent – no bootloader bugs
           lb config \
             --mode debian \
             --parent-distribution jammy \
@@ -32,41 +32,30 @@ jobs:
             --architecture amd64 \
             --archive-areas 'main universe multiverse restricted' \
             --parent-archive-areas 'main universe multiverse restricted' \
-            --parent-mirror-bootstrap http://archive.ubuntu.com/ubuntu/ \
-            --mirror-bootstrap http://archive.ubuntu.com/ubuntu/ \
-            --parent-mirror-chroot http://archive.ubuntu.com/ubuntu/ \
-            --mirror-chroot http://archive.ubuntu.com/ubuntu/ \
-            --parent-mirror-chroot-security http://security.ubuntu.com/ubuntu/ \
-            --mirror-chroot-security http://security.ubuntu.com/ubuntu/ \
-            --parent-mirror-binary http://archive.ubuntu.com/ubuntu/ \
-            --mirror-binary http://archive.ubuntu.com/ubuntu/ \
-            --security false \
-            --linux-flavours none \
             --debian-installer false \
             --bootappend-live 'boot=live components quiet splash' \
             --iso-publisher 'Kebabuntu' \
             --iso-volume 'Kebabuntu Live' \
             --iso-application 'Kebabuntu OS'
           
-          # Package list (kernel + XFCE) – written as a single clean printf
+          # Package list
           mkdir -p config/package-lists
           printf '%s\n' \
-            linux-image-generic \
-            xfce4 \
-            xfce4-goodies \
-            lightdm \
-            neofetch \
-            git \
-            vim \
-            htop \
-            curl \
-            wget \
-            sudo \
-            network-manager \
-            firefox \
+            'xfce4' \
+            'xfce4-goodies' \
+            'lightdm' \
+            'neofetch' \
+            'git' \
+            'vim' \
+            'htop' \
+            'curl' \
+            'wget' \
+            'sudo' \
+            'network-manager' \
+            'firefox' \
             > config/package-lists/kebabuntu.list.chroot
           
-          # Override auto-generated sources with correct Ubuntu repos
+          # Ubuntu repositories for the live system
           mkdir -p config/archives
           printf '%s\n' \
             'deb http://archive.ubuntu.com/ubuntu jammy main universe multiverse restricted' \
@@ -74,7 +63,6 @@ jobs:
             'deb http://security.ubuntu.com/ubuntu jammy-security main universe multiverse restricted' \
             > config/archives/ubuntu.list.chroot
           
-          # Build the ISO
           lb build --verbose
           
           if [ -f live-image-amd64.hybrid.iso ]; then
