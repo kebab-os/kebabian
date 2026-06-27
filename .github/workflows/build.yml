@@ -24,7 +24,6 @@ jobs:
           mkdir -p kebabuntu-build
           cd kebabuntu-build
           
-          # Debian mode with explicit Ubuntu mirrors
           lb config \
             --mode debian \
             --parent-distribution jammy \
@@ -43,6 +42,10 @@ jobs:
             --iso-publisher 'Kebabuntu' \
             --iso-volume 'Kebabuntu Live' \
             --iso-application 'Kebabuntu OS'
+          
+          # Remove any lingering Debian security mirror references
+          find config/ -type f -name '*.list' -exec sed -i '/security\.debian\.org/d' {} \;
+          find config/ -type f -name '*.list' -exec sed -i '/deb\.debian\.org/d' {} \;
           
           # Package list
           mkdir -p config/package-lists
