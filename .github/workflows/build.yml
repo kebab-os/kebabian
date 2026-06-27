@@ -24,11 +24,15 @@ jobs:
           mkdir -p kebabuntu-build
           cd kebabuntu-build
           
-          # Debian mode with Ubuntu parent – no bootloader bugs
+          # Debian mode with explicit Ubuntu mirrors
           lb config \
             --mode debian \
             --parent-distribution jammy \
             --distribution jammy \
+            --parent-mirror-bootstrap 'http://archive.ubuntu.com/ubuntu/' \
+            --mirror-bootstrap 'http://archive.ubuntu.com/ubuntu/' \
+            --parent-mirror-binary 'http://archive.ubuntu.com/ubuntu/' \
+            --mirror-binary 'http://archive.ubuntu.com/ubuntu/' \
             --architecture amd64 \
             --archive-areas 'main universe multiverse restricted' \
             --parent-archive-areas 'main universe multiverse restricted' \
