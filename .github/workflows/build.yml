@@ -43,10 +43,6 @@ jobs:
             --iso-volume 'Kebabuntu Live' \
             --iso-application 'Kebabuntu OS'
           
-          # Remove any lingering Debian security mirror references
-          find config/ -type f -name '*.list' -exec sed -i '/security\.debian\.org/d' {} \;
-          find config/ -type f -name '*.list' -exec sed -i '/deb\.debian\.org/d' {} \;
-          
           # Package list
           mkdir -p config/package-lists
           printf '%s\n' \
@@ -63,6 +59,13 @@ jobs:
             'network-manager' \
             'firefox' \
             > config/package-lists/kebabuntu.list.chroot
+          
+          # Patch the live-build script that generates security sources
+          # Find and fix any script that references security.debian.org
+          find /usr/lib/live/build /usr/share/live/build -type f -exec sed -i 's|http://security.debian.org/debian-security|http://security.ubuntu.com/ubuntu|g' {} \;
+          find /usr/lib/live/build /usr/share/live/build -type f -exec sed -i 's|http://security.debian.org|http://security.ubuntu.com/ubuntu|g' {} \;
+          find /usr/lib/live/build /usr/share/live/build -type f -exec sed -i 's|http://deb.debian.org/debian|http://archive.ubuntu.com/ubuntu|g' {} \;
+          find /usr/lib/live/build /usr/share/live/build -type f -exec sed -i 's|http://deb.debian.org/debian-security|http://security.ubuntu.com/ubuntu|g' {} \;
           
           lb build --verbose
           
